@@ -50,11 +50,13 @@ module mkEcho#(EchoIndication indication)(Echo);
     rule heard;
         delay.deq;
         indication.heard(delay.first);
+	$display("mkEcho::heard");
     endrule
 
     rule heard2;
         delay2.deq;
         indication.heard2(delay2.first.b, delay2.first.a);
+	$display("mkEcho::heard2");
     endrule
    
    interface EchoRequest request;

@@ -24,50 +24,34 @@
 #include "EchoRequest.h"
 #include "GeneratedTypes.h"
 
-static EchoRequestProxy *echoRequestProxy = 0;
-static sem_t sem_heard2;
+static sem_t sem;
 
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
     virtual void heard(uint32_t v) {
         printf("heard an echo: %d\n", v);
-	echoRequestProxy->say2(v, 2*v);
+        sem_post(&sem);
     }
     virtual void heard2(uint16_t a, uint16_t b) {
-        sem_post(&sem_heard2);
-        //printf("heard an echo2: %ld %ld\n", a, b);
+        printf("heard an echo2: %ld %ld\n", a, b);
+        sem_post(&sem);
     }
     EchoIndication(unsigned int id) : EchoIndicationWrapper(id) {}
 };
 
-static void call_say(int v)
-{
-    printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
-    echoRequestProxy->say(v);
-    sem_wait(&sem_heard2);
-}
-
-static void call_say2(int v, int v2)
-{
-    echoRequestProxy->say2(v, v2);
-    sem_wait(&sem_heard2);
-}
-
 int main(int argc, const char **argv)
 {
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationH2S);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
-    portalExec_start();
+    EchoRequestProxy *echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
+
+    portalExec_start(); // start the "indication" thread
 
     int v = 42;
-    printf("Saying %d\n", v);
-    call_say(v);
-    call_say(v*5);
-    call_say(v*17);
-    call_say(v*93);
-    call_say2(v, v*3);
-    printf("TEST TYPE: SEM\n");
+    echoRequestProxy->say(v);
+    sem_wait(&sem);
+    echoRequestProxy->say2(v, v);
+    sem_wait(&sem);
     echoRequestProxy->setLeds(9);
     return 0;
 }
